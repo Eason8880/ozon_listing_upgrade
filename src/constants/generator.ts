@@ -43,13 +43,13 @@ export const ASPECT_RATIO_OPTIONS: Array<{
 ];
 
 export const DEFAULT_PROMPT =
-  '基于商品原图，生成一张适合电商详情页展示的高质量商品图，保留主体特征，提升画面质感。';
+  'Lifestyle product photography on clean white or light neutral background, soft natural daylight from left side, minimalist desk or surface setting, shallow depth of field, professional commercial style, high-end e-commerce shoot, no clutter, no text overlay';
 
 export const DEFAULT_CONFIG: GeneratorConfig = {
   apiKey: '',
   model: MODEL_OPTIONS[0].id,
   aspectRatio: '3:4',
-  prompt: '',
+  prompt: DEFAULT_PROMPT,
 };
 
 export const BLTCY_BASE_URL = 'https://api.bltcy.ai';

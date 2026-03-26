@@ -22,11 +22,15 @@ type Notice = {
 } | null;
 
 const URL_PATTERN = /^https?:\/\/.+/i;
+const ENABLED_MODEL_ID = 'nano-banana';
 
 export function GeneratorPage() {
+  const storedModelId = readStoredValue(STORAGE_KEYS.selectedModel);
+  const initialModel = storedModelId === ENABLED_MODEL_ID ? storedModelId : DEFAULT_CONFIG.model;
+
   const [config, setConfig] = useState(() => ({
     apiKey: readStoredValue(STORAGE_KEYS.apiKey) || DEFAULT_CONFIG.apiKey,
-    model: getModelOptionById(readStoredValue(STORAGE_KEYS.selectedModel)).id,
+    model: getModelOptionById(initialModel).id,
     aspectRatio:
       (readStoredValue(STORAGE_KEYS.selectedAspectRatio) as typeof DEFAULT_CONFIG.aspectRatio) ||
       DEFAULT_CONFIG.aspectRatio,
@@ -343,18 +347,14 @@ export function GeneratorPage() {
       <section className="hero">
         <div className="hero__icon">🪄</div>
         <div>
-          <div className="hero__eyebrow">商品图片生成</div>
-          <h1>每张商品源图，独立生成一张结果图</h1>
+          <h1>商品图片生成</h1>
           <p>支持上传图片和多行 URL，逐张展示进度、失败原因、下载与复制。</p>
         </div>
       </section>
 
       {notice ? <div className={`notice notice--${notice.type}`}>{notice.message}</div> : null}
 
-      <SectionCard
-        title="生成配置"
-        description="保留截图式单页体验，并补上真正可用的批量任务能力。"
-      >
+      <SectionCard title="生成配置">
         <div className="config-grid">
           <label className="field">
             <span className="field__label">
@@ -381,7 +381,11 @@ export function GeneratorPage() {
               }
             >
               {MODEL_OPTIONS.map((option) => (
-                <option key={option.id} value={option.id}>
+                <option
+                  key={option.id}
+                  value={option.id}
+                  disabled={option.id !== ENABLED_MODEL_ID}
+                >
                   {option.label}（{option.priceHint}）
                 </option>
               ))}
