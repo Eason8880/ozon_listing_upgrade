@@ -1,9 +1,13 @@
-# 商品图片生成
+# Ozon Listing Upgrade
 
-基于 `Vite + React + TypeScript` 的纯前端商品图生成站点，适合直接部署到 `Vercel`。
+基于 `Vite + React + TypeScript` 的纯前端工具站点，适合直接部署到 `Vercel`。
 
 ## 功能
 
+- 新增 `数据翻译` Tab：
+  - 上传 `.xls / .xlsx`（仅处理第 1 个工作表）
+  - 调用 OpenRouter（`google/gemini-2.5-flash`、`openai/gpt-4o-mini`）翻译 `商品名称`、`简介` 为俄语
+  - 按固定字段规则生成全新 `.xlsx` 结果文件（只保留目标 10 列）
 - 用户输入 `bltcy.ai` API Key 后调用 BLTCY 生图接口
 - 支持本地上传图片和多行图片 URL 混合提交
 - 支持 `nano-banana`、`gpt-4o-image`、`gemini-3.1-flash-image-preview-4k`、`nano-banana-2-4k`
@@ -48,6 +52,7 @@ git push -u origin main
 
 ## 注意
 
+- `数据翻译` 的 OpenRouter Key 会保存在浏览器本地环境中。
 - `API Key` 会保存在浏览器本地环境中。
 - 当前 4 个模型统一请求 `https://api.bltcy.ai/v1/images/generations`。
 - 如果接口返回的是公网 `url`，页面支持复制 URL。

@@ -340,11 +340,8 @@ export function GeneratorPage() {
   }
 
   return (
-    <main className="page-shell">
-      <div className="page-shell__glow page-shell__glow--left" />
-      <div className="page-shell__glow page-shell__glow--right" />
-
-      <section className="hero">
+    <>
+      <section className="hero hero--compact">
         <div className="hero__icon">🪄</div>
         <div>
           <h1>商品图片生成</h1>
@@ -595,7 +592,7 @@ export function GeneratorPage() {
           </div>
         </div>
       ) : null}
-    </main>
+    </>
   );
 }
 

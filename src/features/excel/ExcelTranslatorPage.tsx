@@ -1,0 +1,289 @@
+import { ChangeEvent, DragEvent, useEffect, useMemo, useState } from 'react';
+
+import { SectionCard } from '../../components/SectionCard';
+import {
+  DEFAULT_OPENROUTER_MODEL,
+  EXCEL_TRANSLATOR_STORAGE_KEYS,
+  OPENROUTER_BATCH_SIZE,
+  OPENROUTER_MODEL_OPTIONS,
+} from '../../constants/excelTranslator';
+import { translateBatch } from '../../services/openRouterClient';
+import type { OpenRouterModelId, TranslateBatchResultItem } from '../../types/excelTranslator';
+import { downloadBlob } from '../../utils/download';
+import { sanitizeFileName } from '../../utils/file';
+import {
+  buildResultWorkbookBuffer,
+  fileNameToResultName,
+  multiplyDimensionsByTen,
+  parseSourceRowsFromExcel,
+  removeLastChars,
+  shuffleByWhitespace,
+} from '../../utils/excelTranslator';
+import { readStoredValue, writeStoredValue } from '../../utils/storage';
+
+type Notice = {
+  type: 'success' | 'error';
+  message: string;
+} | null;
+
+const ACCEPT_EXTENSIONS = ['.xls', '.xlsx'];
+
+export function ExcelTranslatorPage() {
+  const storedModel = readStoredValue(EXCEL_TRANSLATOR_STORAGE_KEYS.selectedModel) as OpenRouterModelId;
+  const initialModel = OPENROUTER_MODEL_OPTIONS.some((option) => option.id === storedModel)
+    ? storedModel
+    : DEFAULT_OPENROUTER_MODEL;
+
+  const [apiKey, setApiKey] = useState(readStoredValue(EXCEL_TRANSLATOR_STORAGE_KEYS.apiKey));
+  const [model, setModel] = useState<OpenRouterModelId>(initialModel);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [statusText, setStatusText] = useState('');
+  const [errorText, setErrorText] = useState('');
+  const [notice, setNotice] = useState<Notice>(null);
+
+  useEffect(() => {
+    writeStoredValue(EXCEL_TRANSLATOR_STORAGE_KEYS.apiKey, apiKey);
+  }, [apiKey]);
+
+  useEffect(() => {
+    writeStoredValue(EXCEL_TRANSLATOR_STORAGE_KEYS.selectedModel, model);
+  }, [model]);
+
+  useEffect(() => {
+    if (!notice) {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => setNotice(null), 3200);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
+  const canProcess = useMemo(() => {
+    return Boolean(selectedFile && apiKey.trim() && !isProcessing);
+  }, [selectedFile, apiKey, isProcessing]);
+
+  async function handleProcessAndDownload() {
+    if (!selectedFile) {
+      setErrorText('请先上传 Excel 文件。');
+      return;
+    }
+    if (!apiKey.trim()) {
+      setErrorText('请先填写 OpenRouter API Key。');
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      setErrorText('');
+      setNotice(null);
+
+      setStatusText('正在读取 Excel...');
+      const sourceRows = await parseSourceRowsFromExcel(selectedFile);
+
+      const translationInputs = sourceRows.map((row) => ({
+        nameText: removeLastChars(row.productName, 8),
+        descriptionText: row.description,
+      }));
+
+      const translated = await translateInBatches(translationInputs);
+
+      setStatusText('正在生成结果文件...');
+      const resultRows = sourceRows.map((row, index) => {
+        const translatedItem = translated[index];
+        return {
+          '货号*': row.sellerSku,
+          '型号名称*': row.erpId,
+          商品颜色: row.productAttribute,
+          商品名称: translatedItem.nameRu,
+          毛重: row.weightG,
+          '宽/高/长': multiplyDimensionsByTen(row.dimensions),
+          '主图链接*': row.mainImage,
+          附加图片: shuffleByWhitespace(row.extraImage),
+          '品牌*': 'Нет бренда',
+          简介: translatedItem.descriptionRu,
+        };
+      });
+
+      const buffer = buildResultWorkbookBuffer(resultRows);
+      const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const downloadName = sanitizeFileName(fileNameToResultName(selectedFile.name));
+      downloadBlob(blob, downloadName);
+      setNotice({ type: 'success', message: '处理完成，结果文件已开始下载。' });
+      setStatusText('处理完成');
+    } catch (error) {
+      setErrorText(getErrorMessage(error));
+      setStatusText('');
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
+  async function translateInBatches(items: Array<{ nameText: string; descriptionText: string }>) {
+    const allResults: TranslateBatchResultItem[] = [];
+    const totalBatchCount = Math.max(1, Math.ceil(items.length / OPENROUTER_BATCH_SIZE));
+
+    for (let offset = 0; offset < items.length; offset += OPENROUTER_BATCH_SIZE) {
+      const batchIndex = Math.floor(offset / OPENROUTER_BATCH_SIZE) + 1;
+      setStatusText(`正在翻译第 ${batchIndex}/${totalBatchCount} 批...`);
+      const batchItems = items.slice(offset, offset + OPENROUTER_BATCH_SIZE);
+      const batchResult = await translateBatch({
+        apiKey: apiKey.trim(),
+        model,
+        items: batchItems,
+      });
+      allResults.push(...batchResult);
+    }
+
+    return allResults;
+  }
+
+  function handleInputFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    applySelectedFile(file);
+    event.target.value = '';
+  }
+
+  function handleDrop(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    setIsDragging(false);
+    const file = event.dataTransfer.files?.[0];
+    if (!file) {
+      return;
+    }
+    applySelectedFile(file);
+  }
+
+  function handleDragOver(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    setIsDragging(true);
+  }
+
+  function handleDragLeave(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    setIsDragging(false);
+  }
+
+  function applySelectedFile(file: File) {
+    const name = file.name.toLowerCase();
+    if (!ACCEPT_EXTENSIONS.some((extension) => name.endsWith(extension))) {
+      setErrorText('仅支持 .xls / .xlsx 文件。');
+      return;
+    }
+    if (file.size === 0) {
+      setErrorText('文件内容为空，请重新上传。');
+      return;
+    }
+
+    setSelectedFile(file);
+    setErrorText('');
+  }
+
+  return (
+    <>
+      <section className="hero hero--compact">
+        <div className="hero__icon">📄</div>
+        <div>
+          <h1>数据翻译</h1>
+          <p>上传 Excel，按字段规则处理并生成新的俄语结果文件。</p>
+        </div>
+      </section>
+
+      {notice ? <div className={`notice notice--${notice.type}`}>{notice.message}</div> : null}
+
+      <SectionCard title="OpenRouter API 设置">
+        <div className="config-grid config-grid--two">
+          <label className="field">
+            <span className="field__label">
+              API Key <em>（必填）</em>
+            </span>
+            <input
+              className="field__control"
+              type="password"
+              placeholder="sk-or-v1-..."
+              value={apiKey}
+              onChange={(event) => setApiKey(event.target.value)}
+            />
+          </label>
+
+          <label className="field">
+            <span className="field__label">翻译模型</span>
+            <select
+              className="field__control"
+              value={model}
+              onChange={(event) => setModel(event.target.value as OpenRouterModelId)}
+            >
+              {OPENROUTER_MODEL_OPTIONS.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="字段映射说明">
+        <div className="mapping-grid">
+          <p>货号* ← Seller SKU</p>
+          <p>型号名称* ← ERP ID</p>
+          <p>商品颜色 ← 产品属性</p>
+          <p>商品名称 ← 去后8位 + 俄语翻译</p>
+          <p>毛重 ← g</p>
+          <p>宽/高/长 ← cm×10</p>
+          <p>主图链接* ← 规格图片</p>
+          <p>附加图片 ← 空格分隔后随机打乱</p>
+          <p>品牌* ← Нет бренда</p>
+          <p>简介 ← 俄语翻译</p>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="上传并处理">
+        <label
+          className={`file-dropzone ${isDragging ? 'file-dropzone--dragging' : ''}`}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+        >
+          <input
+            className="sr-only"
+            type="file"
+            accept=".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            onChange={handleInputFileChange}
+          />
+          <div className="file-dropzone__icon">⇪</div>
+          <strong>点击或拖拽上传 Excel</strong>
+          <span>支持 .xls / .xlsx</span>
+          {selectedFile ? <em>已选择：{selectedFile.name}</em> : null}
+        </label>
+
+        <button
+          className="primary-button"
+          type="button"
+          disabled={!canProcess}
+          onClick={handleProcessAndDownload}
+        >
+          {isProcessing ? '处理中...' : '处理并下载'}
+        </button>
+
+        {statusText ? <p className="status-line">{statusText}</p> : null}
+        {errorText ? <div className="form-error">{errorText}</div> : null}
+      </SectionCard>
+    </>
+  );
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return '处理失败，请稍后重试。';
+}
