@@ -363,7 +363,7 @@ export function GeneratorPage() {
             <input
               className="field__control"
               type="password"
-              placeholder="输入 bltcy.ai API Key"
+              placeholder="输入 API Key"
               value={config.apiKey}
               onChange={(event) =>
                 setConfig((current) => ({ ...current, apiKey: event.target.value }))
