@@ -5,13 +5,14 @@ import { StatusBadge } from '../../components/StatusBadge';
 import {
   ASPECT_RATIO_OPTIONS,
   DEFAULT_CONFIG,
+  getModelOptionById,
   MODEL_OPTIONS,
   STORAGE_KEYS,
 } from '../../constants/generator';
 import { generateImage } from '../../services/bltcyClient';
 import type { BatchSummary, GenerationTask, InputAsset } from '../../types/generator';
 import { copyText } from '../../utils/clipboard';
-import { generateId, sanitizeFileName } from '../../utils/file';
+import { dataUrlToBlob, generateId, sanitizeFileName } from '../../utils/file';
 import { downloadBlob, downloadTasksAsZip, fetchImageBlob } from '../../utils/download';
 import { readStoredValue, writeStoredValue } from '../../utils/storage';
 
@@ -25,7 +26,7 @@ const URL_PATTERN = /^https?:\/\/.+/i;
 export function GeneratorPage() {
   const [config, setConfig] = useState(() => ({
     apiKey: readStoredValue(STORAGE_KEYS.apiKey) || DEFAULT_CONFIG.apiKey,
-    model: readStoredValue(STORAGE_KEYS.selectedModel) || DEFAULT_CONFIG.model,
+    model: getModelOptionById(readStoredValue(STORAGE_KEYS.selectedModel)).id,
     aspectRatio:
       (readStoredValue(STORAGE_KEYS.selectedAspectRatio) as typeof DEFAULT_CONFIG.aspectRatio) ||
       DEFAULT_CONFIG.aspectRatio,
@@ -237,7 +238,12 @@ export function GeneratorPage() {
       return task.result.imageBlob;
     }
 
-    const imageUrl = task.result?.imageUrl;
+    const result = task.result;
+    if (!result) {
+      throw new Error('该任务还没有可下载结果。');
+    }
+
+    const imageUrl = result.imageUrl;
     if (!imageUrl) {
       throw new Error('该任务还没有可下载结果。');
     }
@@ -248,8 +254,7 @@ export function GeneratorPage() {
 
     updateTask(task.id, {
       result: {
-        imageUrl,
-        revisedPrompt: task.result?.revisedPrompt,
+        ...result,
         imageBlob,
       },
     });
@@ -280,8 +285,7 @@ export function GeneratorPage() {
         preparedTasks.push({
           ...task,
           result: {
-            imageUrl: task.result!.imageUrl,
-            revisedPrompt: task.result?.revisedPrompt,
+            ...task.result!,
             imageBlob,
           },
         });
@@ -294,9 +298,15 @@ export function GeneratorPage() {
     }
   }
 
-  async function handleCopyOne(url: string) {
+  async function handleCopyOne(task: GenerationTask) {
+    const targetUrl = task.result?.imageUrl;
+    if (!targetUrl || !isCopyableUrl(targetUrl)) {
+      setNotice({ type: 'error', message: '当前模型未返回公网 URL。' });
+      return;
+    }
+
     try {
-      await copyText(url);
+      await copyText(targetUrl);
       setNotice({ type: 'success', message: '图片 URL 已复制。' });
     } catch (error) {
       setNotice({ type: 'error', message: getErrorMessage(error) });
@@ -309,11 +319,15 @@ export function GeneratorPage() {
     }
 
     try {
+      const urls = successfulTasks
+        .map((task) => task.result?.imageUrl)
+        .filter((value): value is string => Boolean(value && isCopyableUrl(value)));
+      if (urls.length === 0) {
+        throw new Error('当前没有可复制的公网 URL。');
+      }
+
       await copyText(
-        successfulTasks
-          .map((task) => task.result?.imageUrl)
-          .filter((value): value is string => Boolean(value))
-          .join('\n'),
+        urls.join('\n'),
       );
       setNotice({ type: 'success', message: '全部成功 URL 已复制。' });
     } catch (error) {
@@ -545,7 +559,7 @@ export function GeneratorPage() {
                   </button>
                   <div className="result-card__body">
                     <strong>{task.source.name}</strong>
-                    <p>{task.result?.revisedPrompt || '结果图已生成，可直接下载或复制 URL。'}</p>
+                    <p>{task.result?.revisedPrompt || '结果图已生成，可直接预览和下载。'}</p>
                     <div className="result-card__actions">
                       <button className="text-button" type="button" onClick={() => handleDownload(task)}>
                         下载
@@ -553,7 +567,8 @@ export function GeneratorPage() {
                       <button
                         className="text-button"
                         type="button"
-                        onClick={() => handleCopyOne(task.result?.imageUrl ?? '')}
+                        onClick={() => handleCopyOne(task)}
+                        disabled={!task.result?.imageUrl || !isCopyableUrl(task.result.imageUrl)}
                       >
                         复制 URL
                       </button>
@@ -588,7 +603,6 @@ function getErrorMessage(error: unknown) {
   return '发生未知错误，请稍后重试。';
 }
 
-async function dataUrlToBlob(dataUrl: string) {
-  const response = await fetch(dataUrl);
-  return response.blob();
+function isCopyableUrl(value: string) {
+  return /^https?:\/\//i.test(value);
 }

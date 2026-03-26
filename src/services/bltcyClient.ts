@@ -1,19 +1,15 @@
-import {
-  ASPECT_RATIO_TO_SIZE,
-  BLTCY_BASE_URL,
-  DEFAULT_PROMPT,
-} from '../constants/generator';
-import { fileToDataUrl } from '../utils/file';
+import { ASPECT_RATIO_TO_SIZE, BLTCY_BASE_URL, DEFAULT_PROMPT } from '../constants/generator';
+import { dataUrlToBlob, fileToDataUrl } from '../utils/file';
 import type { GenerateImageParams } from '../types/generator';
 
-interface BltcyImageItem {
+interface OpenAIImageItem {
   url?: string;
   b64_json?: string;
   revised_prompt?: string;
 }
 
-interface BltcyImageResponse {
-  data?: BltcyImageItem[];
+interface OpenAIImageResponse {
+  data?: OpenAIImageItem[];
   error?: {
     message?: string;
   };
@@ -24,7 +20,7 @@ export async function generateImage(params: GenerateImageParams) {
   const payload = {
     model: params.model,
     prompt: params.prompt.trim() || DEFAULT_PROMPT,
-    image: [await resolveSourceValue(params)],
+    image: [await resolveImageSource(params)],
     aspect_ratio: params.aspectRatio,
     size: ASPECT_RATIO_TO_SIZE[params.aspectRatio],
     n: 1,
@@ -40,8 +36,7 @@ export async function generateImage(params: GenerateImageParams) {
     body: JSON.stringify(payload),
   });
 
-  const json = (await response.json().catch(() => null)) as BltcyImageResponse | null;
-
+  const json = (await response.json().catch(() => null)) as OpenAIImageResponse | null;
   if (!response.ok) {
     throw new Error(
       json?.error?.message ?? json?.message ?? '生图请求失败，请检查 Key 或稍后重试。',
@@ -61,16 +56,19 @@ export async function generateImage(params: GenerateImageParams) {
   }
 
   if (item.b64_json) {
+    const imageUrl = `data:image/png;base64,${item.b64_json}`;
+    const imageBlob = await dataUrlToBlob(imageUrl);
     return {
-      imageUrl: `data:image/png;base64,${item.b64_json}`,
+      imageUrl,
       revisedPrompt: item.revised_prompt,
+      imageBlob,
     };
   }
 
-  throw new Error('返回结果格式不支持，请切换模型后再试。');
+  throw new Error('接口未返回图片地址，请切换模型或稍后重试。');
 }
 
-async function resolveSourceValue(params: GenerateImageParams) {
+async function resolveImageSource(params: GenerateImageParams) {
   if (params.source.kind === 'url') {
     return params.source.value;
   }

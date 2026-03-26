@@ -9,19 +9,24 @@ export const STORAGE_KEYS = {
 
 export const MODEL_OPTIONS: ModelOption[] = [
   {
-    id: 'gemini-2.5-flash-image-preview',
-    label: 'Gemini 2.5 Flash',
-    priceHint: '0.04元/次',
-  },
-  {
     id: 'nano-banana',
     label: 'Nano Banana',
     priceHint: '推荐图生图',
   },
   {
-    id: 'doubao-seededit-3-0-i2i-250628',
-    label: '即梦 3 图生图',
-    priceHint: '细节编辑',
+    id: 'gpt-4o-image',
+    label: 'GPT-4o Image',
+    priceHint: '稳定出图',
+  },
+  {
+    id: 'gemini-3.1-flash-image-preview-4k',
+    label: 'Gemini 3.1 Flash Image Preview 4K',
+    priceHint: '4K 预览',
+  },
+  {
+    id: 'nano-banana-2-4k',
+    label: 'Nano Banana 2 4K',
+    priceHint: '高清图生图',
   },
 ];
 
@@ -48,6 +53,10 @@ export const DEFAULT_CONFIG: GeneratorConfig = {
 };
 
 export const BLTCY_BASE_URL = 'https://api.bltcy.ai';
+
+export function getModelOptionById(modelId: string) {
+  return MODEL_OPTIONS.find((option) => option.id === modelId) ?? MODEL_OPTIONS[0];
+}
 
 export const ASPECT_RATIO_TO_SIZE: Record<AspectRatioOption, string> = {
   '1:1': '1024x1024',

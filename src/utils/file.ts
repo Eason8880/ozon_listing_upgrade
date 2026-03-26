@@ -24,6 +24,14 @@ export function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
+export async function dataUrlToBlob(dataUrl: string) {
+  const response = await fetch(dataUrl);
+  if (!response.ok) {
+    throw new Error('图片数据解析失败。');
+  }
+  return response.blob();
+}
+
 export function sanitizeFileName(input: string) {
   return input.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-').replace(/\s+/g, '-');
 }

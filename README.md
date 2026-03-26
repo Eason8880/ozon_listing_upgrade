@@ -1,11 +1,12 @@
 # 商品图片生成
 
-基于 `Vite + React + TypeScript` 的纯前端批量商品图生成站点，适合直接部署到 `Vercel`。
+基于 `Vite + React + TypeScript` 的纯前端商品图生成站点，适合直接部署到 `Vercel`。
 
 ## 功能
 
-- 用户输入 `bltcy.ai` API Key 后直接在浏览器侧调用生图接口
+- 用户输入 `bltcy.ai` API Key 后调用 BLTCY 生图接口
 - 支持本地上传图片和多行图片 URL 混合提交
+- 支持 `nano-banana`、`gpt-4o-image`、`gemini-3.1-flash-image-preview-4k`、`nano-banana-2-4k`
 - 逐张生成、逐条展示状态，失败项可单独重试
 - 成功结果支持预览、单张下载、单张复制 URL、批量复制 URL、ZIP 打包下载
 - `API Key`、模型、比例、提示词自动保存到浏览器本地
@@ -47,6 +48,7 @@ git push -u origin main
 
 ## 注意
 
-- 这是纯前端方案，`API Key` 会保存在浏览器本地环境中。
-- 站点默认请求 `https://api.bltcy.ai/v1/images/generations`。
-- 若目标模型不接受本地图片 `data URL`，需要改为服务端代理或改成先上传后再传公开 URL。
+- `API Key` 会保存在浏览器本地环境中。
+- 当前 4 个模型统一请求 `https://api.bltcy.ai/v1/images/generations`。
+- 如果接口返回的是公网 `url`，页面支持复制 URL。
+- 如果接口返回的是 `b64_json`，页面仍支持预览、下载和 ZIP，但不会复制 `data:` 地址。
