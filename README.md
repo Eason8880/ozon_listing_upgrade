@@ -8,6 +8,7 @@
   - 上传 `.xls / .xlsx`（仅处理第 1 个工作表）
   - 调用 OpenRouter（`google/gemini-2.5-flash`、`openai/gpt-4o-mini`）翻译 `商品名称`、`简介` 为俄语
   - 按固定字段规则生成全新 `.xlsx` 结果文件（14 列 Ozon 模板）
+- 视觉系统升级：基于 Tailwind CSS 3 + Editorial-Dark 主题 token（玻璃质感、层级阴影、统一控件状态）
 - 用户输入 `bltcy.ai` API Key 后调用 BLTCY 生图接口
 - 支持本地上传图片和多行图片 URL 混合提交
 - 支持 `nano-banana`、`gpt-4o-image`、`gemini-3.1-flash-image-preview-4k`、`nano-banana-2-4k`

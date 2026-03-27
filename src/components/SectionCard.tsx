@@ -5,11 +5,18 @@ interface SectionCardProps {
   description?: string;
   actions?: ReactNode;
   children: ReactNode;
+  tone?: 'default' | 'low' | 'high';
+  className?: string;
 }
 
 export function SectionCard(props: SectionCardProps) {
+  const tone = props.tone ?? 'default';
+  const className = ['section-card', `section-card--${tone}`, props.className]
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <section className="section-card">
+    <section className={className}>
       <div className="section-card__header">
         <div>
           <h2>{props.title}</h2>
