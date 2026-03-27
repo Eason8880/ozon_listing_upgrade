@@ -1,4 +1,4 @@
-import { OPENROUTER_BASE_URL } from '../constants/excelTranslator';
+import { OPENROUTER_BASE_URL, OPENROUTER_PROXY_PATH } from '../constants/excelTranslator';
 import type {
   TranslateBatchParams,
   TranslateBatchResultItem,
@@ -22,6 +22,18 @@ interface ParsedTranslationPayload {
   }>;
 }
 
+interface OpenRouterPayload {
+  model: string;
+  temperature: number;
+  response_format: {
+    type: 'json_object';
+  };
+  messages: Array<{
+    role: 'system' | 'user';
+    content: string;
+  }>;
+}
+
 export async function translateBatch(
   params: TranslateBatchParams,
 ): Promise<TranslateBatchResultItem[]> {
@@ -29,40 +41,17 @@ export async function translateBatch(
     return [];
   }
 
-  const response = await fetch(OPENROUTER_BASE_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${params.apiKey}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': window.location.origin,
-      'X-Title': 'ozon-listing-upgrade',
-    },
-    body: JSON.stringify({
-      model: params.model,
-      temperature: 0,
-      response_format: { type: 'json_object' },
-      messages: [
-        {
-          role: 'system',
-          content:
-            '你是电商文案翻译助手。请把输入转换成俄语，保持自然、准确，不要新增营销夸张词。',
-        },
-        {
-          role: 'user',
-          content: [
-            '请将下面数组逐条翻译为俄语，仅返回 JSON 对象。',
-            '格式必须是：{"items":[{"name":"...","description":"..."}]}',
-            `数组长度必须为 ${params.items.length}，顺序必须与输入一致。`,
-            `输入：${JSON.stringify(params.items)}`,
-          ].join('\n'),
-        },
-      ],
-    }),
-  });
+  const payload = buildPayload(params);
+  let json: OpenRouterResponse | null;
 
-  const json = (await response.json().catch(() => null)) as OpenRouterResponse | null;
-  if (!response.ok) {
-    throw new Error(json?.error?.message ?? 'OpenRouter 请求失败，请检查 API Key 或稍后重试。');
+  try {
+    json = await requestOpenRouterDirect(params.apiKey, payload);
+  } catch (error) {
+    if (!isNetworkError(error)) {
+      throw error;
+    }
+
+    json = await requestOpenRouterProxy(params.apiKey, payload);
   }
 
   const rawContent = json?.choices?.[0]?.message?.content?.trim();
@@ -83,6 +72,85 @@ export async function translateBatch(
         ? item.description.trim()
         : params.items[index].descriptionText,
   }));
+}
+
+function buildPayload(params: TranslateBatchParams): OpenRouterPayload {
+  return {
+    model: params.model,
+    temperature: 0,
+    response_format: { type: 'json_object' },
+    messages: [
+      {
+        role: 'system',
+        content:
+          '你是电商文案翻译助手。请把输入转换成俄语，保持自然、准确，不要新增营销夸张词。',
+      },
+      {
+        role: 'user',
+        content: [
+          '请将下面数组逐条翻译为俄语，仅返回 JSON 对象。',
+          '格式必须是：{"items":[{"name":"...","description":"..."}]}',
+          `数组长度必须为 ${params.items.length}，顺序必须与输入一致。`,
+          `输入：${JSON.stringify(params.items)}`,
+        ].join('\n'),
+      },
+    ],
+  };
+}
+
+async function requestOpenRouterDirect(apiKey: string, payload: OpenRouterPayload) {
+  const response = await fetch(OPENROUTER_BASE_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': window.location.origin,
+      'X-Title': 'ozon-listing-upgrade',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  return parseOpenRouterResponse(response);
+}
+
+async function requestOpenRouterProxy(apiKey: string, payload: OpenRouterPayload) {
+  const response = await fetch(OPENROUTER_PROXY_PATH, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      apiKey,
+      payload,
+    }),
+  });
+
+  if (response.status === 404) {
+    throw new Error('请求失败：当前环境未启用 OpenRouter 代理接口。');
+  }
+
+  return parseOpenRouterResponse(response);
+}
+
+async function parseOpenRouterResponse(response: Response) {
+  const json = (await response.json().catch(() => null)) as OpenRouterResponse | null;
+  if (!response.ok) {
+    throw new Error(json?.error?.message ?? 'OpenRouter 请求失败，请检查 API Key 或稍后重试。');
+  }
+  return json;
+}
+
+function isNetworkError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const message = error.message.toLowerCase();
+  return (
+    message.includes('failed to fetch') ||
+    message.includes('networkerror') ||
+    message.includes('load failed')
+  );
 }
 
 function safeParsePayload(content: string): ParsedTranslationPayload {

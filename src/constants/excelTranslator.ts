@@ -17,6 +17,7 @@ export const OPENROUTER_MODEL_OPTIONS: OpenRouterModelOption[] = [
 export const DEFAULT_OPENROUTER_MODEL = 'google/gemini-2.5-flash';
 
 export const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1/chat/completions';
+export const OPENROUTER_PROXY_PATH = '/api/openrouter-chat';
 
 export const TARGET_COLUMNS = [
   '货号*',
