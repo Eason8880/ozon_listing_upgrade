@@ -20,14 +20,18 @@ export const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1/chat/completion
 
 export const TARGET_COLUMNS = [
   '货号*',
-  '型号名称*',
-  '商品颜色',
   '商品名称',
-  '毛重',
-  '宽/高/长',
+  '价格，USD*',
+  '折扣前价格，USD',
+  '毛重，克*',
+  '包装宽度，毫米*',
+  '包装高度，毫米*',
+  '包装长度，毫米*',
   '主图链接*',
-  '附加图片',
+  '附加图片链接',
   '品牌*',
+  '型号名称*',
+  '颜色样本',
   '简介',
 ] as const;
 
@@ -43,39 +47,44 @@ export const SOURCE_COLUMN_DEFINITIONS: SourceColumnDefinition[] = [
     aliases: ['erp id', 'erpid', 'erp_id', 'erp-id'],
   },
   {
-    key: 'productAttribute',
-    label: '产品属性',
-    aliases: ['产品属性', '商品属性', '颜色属性'],
-  },
-  {
     key: 'productName',
     label: '商品名称',
     aliases: ['商品名称', '产品名称', 'name'],
   },
   {
-    key: 'weightG',
-    label: 'g',
-    aliases: ['g', '重量g', '重量', '毛重', 'weight', 'weightg'],
+    key: 'weightGram',
+    label: '商品重量(g)',
+    aliases: ['商品重量(g)', '商品重量g', '重量(g)', '重量g', 'weight(g)', 'weightg'],
   },
   {
-    key: 'dimensions',
-    label: '宽/高/长',
-    aliases: ['宽/高/长', '宽高长', '长宽高', '尺寸', '尺寸cm'],
+    key: 'widthCm',
+    label: '商品宽度(cm)',
+    aliases: ['商品宽度(cm)', '商品宽度cm', '宽度(cm)', '宽度cm', 'width(cm)', 'widthcm'],
   },
   {
-    key: 'mainImage',
-    label: '规格图片',
-    aliases: ['规格图片', '主图链接', '主图', '规格图'],
+    key: 'heightCm',
+    label: '商品高度(cm)',
+    aliases: ['商品高度(cm)', '商品高度cm', '高度(cm)', '高度cm', 'height(cm)', 'heightcm'],
   },
   {
-    key: 'extraImage',
-    label: '附加图片',
-    aliases: ['附加图片', '附图', '副图'],
+    key: 'lengthCm',
+    label: '商品长度(cm)',
+    aliases: ['商品长度(cm)', '商品长度cm', '长度(cm)', '长度cm', 'length(cm)', 'lengthcm'],
   },
   {
-    key: 'description',
-    label: '简介',
-    aliases: ['简介', '商品简介', '描述', '商品描述'],
+    key: 'specImage',
+    label: '规格1图片',
+    aliases: ['规格1图片', '规格图片', '规格图', '主图链接'],
+  },
+  {
+    key: 'allImagesLink1',
+    label: '所有图片链接1',
+    aliases: ['所有图片链接1', '所有图片链接 1'],
+  },
+  {
+    key: 'descriptionNoImage',
+    label: '描述（不包括图片）',
+    aliases: ['描述（不包括图片）', '描述(不包括图片)', '描述不包括图片'],
   },
 ];
 

@@ -14,10 +14,11 @@ import { sanitizeFileName } from '../../utils/file';
 import {
   buildResultWorkbookBuffer,
   fileNameToResultName,
-  multiplyDimensionsByTen,
+  multiplyCentimeterToMillimeter,
+  normalizeDescriptionLineBreaks,
+  normalizeExtraImageLinks,
   parseSourceRowsFromExcel,
   removeLastChars,
-  shuffleByWhitespace,
 } from '../../utils/excelTranslator';
 import { readStoredValue, writeStoredValue } from '../../utils/storage';
 
@@ -84,7 +85,7 @@ export function ExcelTranslatorPage() {
 
       const translationInputs = sourceRows.map((row) => ({
         nameText: removeLastChars(row.productName, 8),
-        descriptionText: row.description,
+        descriptionText: normalizeDescriptionLineBreaks(row.descriptionNoImage),
       }));
 
       const translated = await translateInBatches(translationInputs);
@@ -94,14 +95,18 @@ export function ExcelTranslatorPage() {
         const translatedItem = translated[index];
         return {
           '货号*': row.sellerSku,
-          '型号名称*': row.erpId,
-          商品颜色: row.productAttribute,
           商品名称: translatedItem.nameRu,
-          毛重: row.weightG,
-          '宽/高/长': multiplyDimensionsByTen(row.dimensions),
-          '主图链接*': row.mainImage,
-          附加图片: shuffleByWhitespace(row.extraImage),
+          '价格，USD*': '',
+          '折扣前价格，USD': '',
+          '毛重，克*': row.weightGram,
+          '包装宽度，毫米*': multiplyCentimeterToMillimeter(row.widthCm),
+          '包装高度，毫米*': multiplyCentimeterToMillimeter(row.heightCm),
+          '包装长度，毫米*': multiplyCentimeterToMillimeter(row.lengthCm),
+          '主图链接*': row.specImage,
+          附加图片链接: normalizeExtraImageLinks(row.allImagesLink1),
           '品牌*': 'Нет бренда',
+          '型号名称*': row.erpId,
+          颜色样本: row.specImage,
           简介: translatedItem.descriptionRu,
         };
       });
@@ -233,15 +238,19 @@ export function ExcelTranslatorPage() {
       <SectionCard title="字段映射说明">
         <div className="mapping-grid">
           <p>货号* ← Seller SKU</p>
-          <p>型号名称* ← ERP ID</p>
-          <p>商品颜色 ← 产品属性</p>
           <p>商品名称 ← 去后8位 + 俄语翻译</p>
-          <p>毛重 ← g</p>
-          <p>宽/高/长 ← cm×10</p>
-          <p>主图链接* ← 规格图片</p>
-          <p>附加图片 ← 空格分隔后随机打乱</p>
+          <p>价格，USD* ← 留空</p>
+          <p>折扣前价格，USD ← 留空</p>
+          <p>毛重，克* ← 商品重量(g)</p>
+          <p>包装宽度，毫米* ← 商品宽度(cm)×10</p>
+          <p>包装高度，毫米* ← 商品高度(cm)×10</p>
+          <p>包装长度，毫米* ← 商品长度(cm)×10</p>
+          <p>主图链接* ← 规格1图片</p>
+          <p>附加图片链接 ← 所有图片链接1（逗号→空格）</p>
           <p>品牌* ← Нет бренда</p>
-          <p>简介 ← 俄语翻译</p>
+          <p>型号名称* ← ERP ID</p>
+          <p>颜色样本 ← 规格1图片</p>
+          <p>简介 ← 描述（不包括图片）俄语翻译</p>
         </div>
       </SectionCard>
 

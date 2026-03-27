@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx';
 
-import { SOURCE_COLUMN_DEFINITIONS } from '../constants/excelTranslator';
-import type { SourceColumnKey, SourceRow } from '../types/excelTranslator';
+import { SOURCE_COLUMN_DEFINITIONS, TARGET_COLUMNS } from '../constants/excelTranslator';
+import type { OzonResultRow, SourceColumnKey, SourceRow } from '../types/excelTranslator';
 
 interface SourceColumnMatchResult {
   matchedIndices: Record<SourceColumnKey, number>;
@@ -36,13 +36,14 @@ export async function parseSourceRowsFromExcel(file: File): Promise<SourceRow[]>
     return {
       sellerSku: getCellValue(row, matched.matchedIndices.sellerSku),
       erpId: getCellValue(row, matched.matchedIndices.erpId),
-      productAttribute: getCellValue(row, matched.matchedIndices.productAttribute),
       productName: getCellValue(row, matched.matchedIndices.productName),
-      weightG: getCellValue(row, matched.matchedIndices.weightG),
-      dimensions: getCellValue(row, matched.matchedIndices.dimensions),
-      mainImage: getCellValue(row, matched.matchedIndices.mainImage),
-      extraImage: getCellValue(row, matched.matchedIndices.extraImage),
-      description: getCellValue(row, matched.matchedIndices.description),
+      weightGram: getCellValue(row, matched.matchedIndices.weightGram),
+      widthCm: getCellValue(row, matched.matchedIndices.widthCm),
+      heightCm: getCellValue(row, matched.matchedIndices.heightCm),
+      lengthCm: getCellValue(row, matched.matchedIndices.lengthCm),
+      specImage: getCellValue(row, matched.matchedIndices.specImage),
+      allImagesLink1: getCellValue(row, matched.matchedIndices.allImagesLink1),
+      descriptionNoImage: getCellValue(row, matched.matchedIndices.descriptionNoImage),
     };
   });
 
@@ -74,49 +75,52 @@ export function removeLastChars(input: string, count = 8) {
   return value.slice(0, value.length - count).trim();
 }
 
-export function multiplyDimensionsByTen(input: string) {
+export function multiplyCentimeterToMillimeter(input: string) {
   const value = String(input ?? '').trim();
   if (!value) {
     return '';
   }
 
-  return value.replace(/-?\d+(?:\.\d+)?/g, (numberText) => {
-    const numeric = Number(numberText);
-    if (Number.isNaN(numeric)) {
-      return numberText;
-    }
-    const multiplied = numeric * 10;
-    return Number.isInteger(multiplied) ? String(multiplied) : multiplied.toFixed(2);
-  });
-}
-
-export function shuffleByWhitespace(input: string) {
-  const tokens = String(input ?? '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-
-  for (let index = tokens.length - 1; index > 0; index -= 1) {
-    const randomIndex = Math.floor(Math.random() * (index + 1));
-    [tokens[index], tokens[randomIndex]] = [tokens[randomIndex], tokens[index]];
+  const numeric = Number(value);
+  if (Number.isNaN(numeric)) {
+    return value;
   }
 
-  return tokens.join(' ');
+  const multiplied = numeric * 10;
+  return Number.isInteger(multiplied) ? String(multiplied) : multiplied.toFixed(2);
 }
 
-export function buildResultWorkbookBuffer(rows: Array<Record<string, string>>) {
+export function normalizeExtraImageLinks(input: string) {
+  return String(input ?? '')
+    .replace(/,/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export function normalizeDescriptionLineBreaks(input: string) {
+  return String(input ?? '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/\r\n/g, '\n')
+    .trim();
+}
+
+export function buildResultWorkbookBuffer(rows: OzonResultRow[]) {
   const worksheet = XLSX.utils.aoa_to_sheet([
-    ['货号*', '型号名称*', '商品颜色', '商品名称', '毛重', '宽/高/长', '主图链接*', '附加图片', '品牌*', '简介'],
+    [...TARGET_COLUMNS],
     ...rows.map((row) => [
       row['货号*'] ?? '',
-      row['型号名称*'] ?? '',
-      row['商品颜色'] ?? '',
       row['商品名称'] ?? '',
-      row['毛重'] ?? '',
-      row['宽/高/长'] ?? '',
+      row['价格，USD*'] ?? '',
+      row['折扣前价格，USD'] ?? '',
+      row['毛重，克*'] ?? '',
+      row['包装宽度，毫米*'] ?? '',
+      row['包装高度，毫米*'] ?? '',
+      row['包装长度，毫米*'] ?? '',
       row['主图链接*'] ?? '',
-      row['附加图片'] ?? '',
+      row['附加图片链接'] ?? '',
       row['品牌*'] ?? '',
+      row['型号名称*'] ?? '',
+      row['颜色样本'] ?? '',
       row['简介'] ?? '',
     ]),
   ]);
