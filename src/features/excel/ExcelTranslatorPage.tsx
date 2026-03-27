@@ -29,6 +29,12 @@ type Notice = {
 
 const ACCEPT_EXTENSIONS = ['.xls', '.xlsx'];
 
+interface SpuTranslationInput {
+  spuKey: string;
+  nameText: string;
+  descriptionText: string;
+}
+
 export function ExcelTranslatorPage() {
   const storedModel = readStoredValue(EXCEL_TRANSLATOR_STORAGE_KEYS.selectedModel) as OpenRouterModelId;
   const initialModel = OPENROUTER_MODEL_OPTIONS.some((option) => option.id === storedModel)
@@ -83,16 +89,21 @@ export function ExcelTranslatorPage() {
       setStatusText('正在读取 Excel...');
       const sourceRows = await parseSourceRowsFromExcel(selectedFile);
 
-      const translationInputs = sourceRows.map((row) => ({
-        nameText: removeLastChars(row.productName, 8),
-        descriptionText: normalizeDescriptionLineBreaks(row.descriptionNoImage),
-      }));
+      const { translationInputs, rowSpuKeys } = buildSpuTranslationInputs(sourceRows);
 
       const translated = await translateInBatches(translationInputs);
+      const translatedBySpu = new Map<string, TranslateBatchResultItem>();
+      translationInputs.forEach((item, index) => {
+        translatedBySpu.set(item.spuKey, translated[index]);
+      });
 
       setStatusText('正在生成结果文件...');
       const resultRows = sourceRows.map((row, index) => {
-        const translatedItem = translated[index];
+        const translatedItem = translatedBySpu.get(rowSpuKeys[index]);
+        if (!translatedItem) {
+          throw new Error('翻译结果回填失败，请重试。');
+        }
+
         return {
           '货号*': row.sellerSku,
           商品名称: translatedItem.nameRu,
@@ -127,18 +138,21 @@ export function ExcelTranslatorPage() {
     }
   }
 
-  async function translateInBatches(items: Array<{ nameText: string; descriptionText: string }>) {
+  async function translateInBatches(items: SpuTranslationInput[]) {
     const allResults: TranslateBatchResultItem[] = [];
     const totalBatchCount = Math.max(1, Math.ceil(items.length / OPENROUTER_BATCH_SIZE));
 
     for (let offset = 0; offset < items.length; offset += OPENROUTER_BATCH_SIZE) {
       const batchIndex = Math.floor(offset / OPENROUTER_BATCH_SIZE) + 1;
-      setStatusText(`正在翻译第 ${batchIndex}/${totalBatchCount} 批...`);
+      setStatusText(`正在翻译 SPU 第 ${batchIndex}/${totalBatchCount} 批...`);
       const batchItems = items.slice(offset, offset + OPENROUTER_BATCH_SIZE);
       const batchResult = await translateBatch({
         apiKey: apiKey.trim(),
         model,
-        items: batchItems,
+        items: batchItems.map((item) => ({
+          nameText: item.nameText,
+          descriptionText: item.descriptionText,
+        })),
       });
       allResults.push(...batchResult);
     }
@@ -251,6 +265,7 @@ export function ExcelTranslatorPage() {
           <p>型号名称* ← ERP ID</p>
           <p>颜色样本 ← 规格1图片</p>
           <p>简介 ← 描述（不包括图片）俄语翻译</p>
+          <p>同 SPU（ERP ID）只翻译首个 SKU，其他复用</p>
         </div>
       </SectionCard>
 
@@ -295,4 +310,33 @@ function getErrorMessage(error: unknown) {
   }
 
   return '处理失败，请稍后重试。';
+}
+
+function buildSpuTranslationInputs(sourceRows: Array<{
+  erpId: string;
+  productName: string;
+  descriptionNoImage: string;
+}>) {
+  const translationInputs: SpuTranslationInput[] = [];
+  const rowSpuKeys: string[] = [];
+  const seenSpuKeys = new Set<string>();
+
+  sourceRows.forEach((row, index) => {
+    const normalizedSpu = row.erpId.trim();
+    const spuKey = normalizedSpu || `__row_${index}`;
+    rowSpuKeys.push(spuKey);
+
+    if (normalizedSpu && seenSpuKeys.has(spuKey)) {
+      return;
+    }
+
+    seenSpuKeys.add(spuKey);
+    translationInputs.push({
+      spuKey,
+      nameText: removeLastChars(row.productName, 8),
+      descriptionText: normalizeDescriptionLineBreaks(row.descriptionNoImage),
+    });
+  });
+
+  return { translationInputs, rowSpuKeys };
 }

@@ -6,7 +6,7 @@ import { GeneratorPage } from './features/generator/GeneratorPage';
 type TabId = 'excel' | 'generator';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<TabId>('excel');
+  const [activeTab, setActiveTab] = useState<TabId>('generator');
 
   return (
     <main className="page-shell">
@@ -15,15 +15,6 @@ function App() {
 
       <div className="tab-switcher" role="tablist" aria-label="功能切换">
         <button
-          className={`tab-switcher__item ${activeTab === 'excel' ? 'is-active' : ''}`}
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'excel'}
-          onClick={() => setActiveTab('excel')}
-        >
-          📄 数据翻译
-        </button>
-        <button
           className={`tab-switcher__item ${activeTab === 'generator' ? 'is-active' : ''}`}
           type="button"
           role="tab"
@@ -31,6 +22,15 @@ function App() {
           onClick={() => setActiveTab('generator')}
         >
           🪄 图片生成
+        </button>
+        <button
+          className={`tab-switcher__item ${activeTab === 'excel' ? 'is-active' : ''}`}
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'excel'}
+          onClick={() => setActiveTab('excel')}
+        >
+          📄 数据翻译
         </button>
       </div>
 
