@@ -86,30 +86,6 @@
     background: rgba(255, 175, 209, 0.16);
   }
 
-  .tab-switcher {
-    @apply mb-7 inline-flex items-center gap-2 rounded-full p-2 backdrop-blur-2xl;
-    background: rgba(45, 19, 65, 0.56);
-    border: 1px solid rgba(76, 68, 80, 0.32);
-    box-shadow: 0 20px 40px rgba(79, 15, 119, 0.15);
-  }
-
-  .tab-switcher__item {
-    @apply min-h-12 rounded-full px-5 text-[15px] font-bold tracking-[-0.01em] transition-all duration-200;
-    color: rgba(242, 218, 255, 0.72);
-  }
-
-  .tab-switcher__item:hover {
-    @apply -translate-y-px;
-    background: rgba(67, 41, 88, 0.46);
-    color: rgba(242, 218, 255, 0.94);
-  }
-
-  .tab-switcher__item.is-active {
-    @apply text-on-surface;
-    background: rgba(67, 41, 88, 0.92);
-    box-shadow: inset 0 0 0 1px rgba(227, 181, 255, 0.35);
-  }
-
   .hero {
     @apply mb-7 flex items-start gap-5;
   }
@@ -228,10 +204,6 @@
     min-height: 140px;
   }
 
-  .upload-bar {
-    @apply mt-2 flex gap-[18px];
-  }
-
   .primary-button,
   .secondary-button,
   .text-button {
@@ -336,159 +308,13 @@
     @apply m-0 mt-3 text-sm text-primary;
   }
 
-  .asset-list {
-    @apply mt-5 flex flex-wrap gap-3;
-  }
-
-  .asset-chip {
-    @apply flex items-center gap-2.5 rounded-xl px-2.5 py-2;
-    background: rgba(67, 41, 88, 0.42);
-  }
-
-  .asset-chip img {
-    @apply h-10 w-10 rounded-lg object-cover;
-  }
-
-  .asset-chip span {
-    @apply max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap text-sm text-on-surface;
-  }
-
-  .asset-chip button {
-    @apply text-xs font-semibold uppercase tracking-[0.05em] text-secondary;
-  }
-
-  .content-grid {
-    @apply grid gap-6;
-    grid-template-columns: 1.05fr 1fr;
-  }
-
-  .summary-pills,
-  .result-actions {
-    @apply flex flex-wrap gap-2.5;
-  }
-
-  .summary-pills span {
-    @apply rounded-full px-3 py-2 text-xs font-bold uppercase tracking-[0.05em] text-on-surface;
-    background: rgba(67, 41, 88, 0.5);
-  }
-
   .empty-state {
     @apply rounded-2xl p-6 text-sm text-on-surface-variant;
     background: rgba(26, 1, 47, 0.56);
   }
-
-  .task-list,
-  .result-grid {
-    @apply grid gap-4;
-  }
-
-  .task-card,
-  .result-card {
-    @apply flex gap-3.5 rounded-2xl p-3.5;
-    background: rgba(67, 41, 88, 0.35);
-    border: 1px solid rgba(76, 68, 80, 0.28);
-  }
-
-  .task-card__preview {
-    @apply h-[92px] w-[92px] rounded-2xl object-cover;
-    background: rgba(26, 1, 47, 0.7);
-  }
-
-  .task-card__body,
-  .result-card__body {
-    @apply min-w-0 flex-1;
-  }
-
-  .task-card__topline {
-    @apply flex items-center justify-between gap-3;
-  }
-
-  .task-card__topline strong,
-  .result-card__body strong {
-    @apply block overflow-hidden text-ellipsis whitespace-nowrap text-sm font-bold text-on-surface;
-  }
-
-  .task-card__meta,
-  .result-card__body p {
-    @apply mt-2 text-sm text-on-surface-variant;
-  }
-
-  .task-card__error {
-    @apply mt-2 text-sm;
-    color: #ffd4da;
-  }
-
-  .task-card__actions,
-  .result-card__actions {
-    @apply mt-3.5 flex gap-2.5;
-  }
-
-  .result-card {
-    @apply flex-col;
-  }
-
-  .result-card__preview {
-    @apply overflow-hidden rounded-2xl p-0;
-    background: rgba(26, 1, 47, 0.68);
-  }
-
-  .result-card__preview img {
-    @apply w-full object-cover;
-    aspect-ratio: 3 / 4;
-  }
-
-  .status-badge {
-    @apply inline-flex min-h-8 min-w-[76px] items-center justify-center rounded-full px-3 text-[11px] font-bold uppercase tracking-[0.06em];
-  }
-
-  .status-badge--idle {
-    background: rgba(76, 68, 80, 0.55);
-    color: rgba(242, 218, 255, 0.74);
-  }
-
-  .status-badge--running {
-    background: rgba(227, 181, 255, 0.24);
-    color: #f3daff;
-  }
-
-  .status-badge--success {
-    background: rgba(79, 214, 176, 0.18);
-    color: #c5ffec;
-  }
-
-  .status-badge--error {
-    background: rgba(255, 180, 171, 0.2);
-    color: #ffd8d2;
-  }
-
-  .preview-modal {
-    @apply fixed inset-0 grid place-items-center p-8;
-    background: rgba(16, 5, 25, 0.8);
-    backdrop-filter: blur(12px);
-  }
-
-  .preview-modal__content {
-    @apply relative rounded-3xl p-3;
-    max-width: min(86vw, 860px);
-    max-height: 86vh;
-    background: rgba(45, 19, 65, 0.92);
-    border: 1px solid rgba(76, 68, 80, 0.32);
-    box-shadow: 0 30px 70px rgba(17, 3, 32, 0.48);
-  }
-
-  .preview-modal__content img {
-    @apply rounded-2xl;
-    max-height: calc(86vh - 24px);
-  }
-
-  .preview-modal__close {
-    @apply absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full text-lg text-on-surface;
-    background: rgba(26, 1, 47, 0.78);
-  }
 }
 
 @media (max-width: 1080px) {
-  .content-grid,
   .config-grid,
   .config-grid--two,
   .mapping-grid {
@@ -505,19 +331,9 @@
     @apply rounded-3xl p-5;
   }
 
-  .upload-bar,
   .hero,
   .section-card__header {
     @apply flex-col;
-  }
-
-  .tab-switcher {
-    @apply grid w-full;
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .tab-switcher__item {
-    @apply min-h-[46px] px-2.5;
   }
 
   .primary-button {
